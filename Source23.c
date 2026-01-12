@@ -28,67 +28,114 @@ void fillData(Position);
 int main() {
     Position head = (Position)malloc(sizeof(Person));
     if (head == NULL) {
-        printf("Memory allocation failed.\n");
+        printf("Memory allocation for head element failed.\n");
         return 1;
     }
-    head->next = NULL;
 
+    head->next = NULL;
     int choice = -1;
 
     while (choice != 0) {
         scanf("%d", &choice);
 
         switch (choice) {
+
         case 1:
-            if (pushFront(head) != 0)
+            if (pushFront(head) != 0) {
                 printf("Error adding element to front.\n");
+                freeMemory(head);
+                free(head);
+                return 1;
+            }
             break;
 
         case 2:
-            if (pushBack(head) != 0)
+            if (pushBack(head) != 0) {
                 printf("Error adding element to back.\n");
+                freeMemory(head);
+                free(head);
+                return 1;
+            }
             break;
 
         case 3:
-            printList(head);
+            if (printList(head) != 0) {
+                freeMemory(head);
+                free(head);
+                return 1;
+            }
             break;
 
         case 4:
-            findPersonByLastName(head);
+            if (findPersonByLastName(head) != 0) {
+                freeMemory(head);
+                free(head);
+                return 1;
+            }
             break;
 
         case 5:
-            deleteCertainElement(head);
+            if (deleteCertainElement(head) != 0) {
+                printf("Error deleting element.\n");
+                freeMemory(head);
+                free(head);
+                return 1;
+            }
             break;
 
         case 6:
-            if (addAfterElement(head) != 0)
-                printf("Error adding element.\n");
+            if (addAfterElement(head) != 0) {
+                printf("Error adding element after.\n");
+                freeMemory(head);
+                free(head);
+                return 1;
+            }
             break;
 
         case 7:
-            if (addBeforeElement(head) != 0)
-                printf("Error adding element.\n");
+            if (addBeforeElement(head) != 0) {
+                printf("Error adding element before.\n");
+                freeMemory(head);
+                free(head);
+                return 1;
+            }
             break;
 
         case 8:
-            if (printListIntoFile(head) != 0)
-                printf("Error writing to file.\n");
+            if (printListIntoFile(head) != 0) {
+                printf("Error writing list to file.\n");
+                freeMemory(head);
+                free(head);
+                return 1;
+            }
             break;
 
         case 9:
-            if (readListFromFile(head) != 0)
-                printf("Error reading from file.\n");
+            if (readListFromFile(head) != 0) {
+                printf("Error reading list from file.\n");
+                freeMemory(head);
+                free(head);
+                return 1;
+            }
             break;
 
         case 0:
             freeMemory(head);
             free(head);
             return 0;
+
+        default:
+            printf("Invalid option.\n");
         }
+
+        printf("Choose next action (0 for exit):\n");
     }
+
+    freeMemory(head);
+    free(head);
     return 0;
 }
+
 
 Position createPerson() {
     Position p = (Position)malloc(sizeof(Person));
