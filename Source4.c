@@ -2,234 +2,265 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
 #define LEN 20
 
 typedef struct _polynom {
-	int value;
-	int exp;
-
-	struct _polynom* next;
+    int value;
+    int exp;
+    struct _polynom* next;
 } Polynom;
 
-typedef struct _polynom* Position;
+typedef Polynom* Position;
 
 int readFromFile(Position, char*);
 Position createElement();
 Position add(Position, Position);
+Position multiply(Position, Position);
 int print(Position);
 void freePolynomial(Position);
-Position multiply(Position, Position);
-
 
 int main() {
-	Position head1 = createElement();
-	head1->next = NULL;
+    Position head1 = createElement();
+    if (head1 == NULL) {
+        printf("Memory allocation failed.\n");
+        return 1;
+    }
+    head1->next = NULL;
 
-	Position head2 = createElement();
-	head2->next = NULL;
+    Position head2 = createElement();
+    if (head2 == NULL) {
+        printf("Memory allocation failed.\n");
+        free(head1);
+        return 1;
+    }
+    head2->next = NULL;
 
-	char file1[LEN];
-	char file2[LEN];
+    char file1[LEN];
+    char file2[LEN];
 
-	printf("Enter first polynomial file name: ");
-	scanf("%s", file1);
+    scanf("%s", file1);
+    scanf("%s", file2);
 
-	printf("Enter second polynomial file name: ");
-	scanf("%s", file2);
+    if (readFromFile(head1, file1) != 0) {
+        printf("Error reading first polynomial.\n");
+        freePolynomial(head1);
+        freePolynomial(head2);
+        return 1;
+    }
 
+    if (readFromFile(head2, file2) != 0) {
+        printf("Error reading second polynomial.\n");
+        freePolynomial(head1);
+        freePolynomial(head2);
+        return 1;
+    }
 
-	readFromFile(head1, file1);
-	printf("First Polynomial:");
-	print(head1->next);
+    printf("First polynomial:");
+    print(head1->next);
 
-	readFromFile(head2, file2);
-	printf("Second Polynomial:");
-	print(head2->next);
+    printf("Second polynomial:");
+    print(head2->next);
 
-	Position sum = add(head1->next, head2->next);
-	printf("Sum Polynomial: \n");
-	print(sum);
+    Position sum = add(head1->next, head2->next);
+    if (sum == NULL) {
+        printf("Error creating sum polynomial.\n");
+        freePolynomial(head1);
+        freePolynomial(head2);
+        return 1;
+    }
 
-	Position product = multiply(head1->next, head2->next);
-	printf("Product Polynomial:\n");
-	print(product);
+    printf("Sum polynomial:\n");
+    print(sum);
 
-	freePolynomial(head1);
-	freePolynomial(head2);
-	freePolynomial(sum);
-	freePolynomial(product);
+    Position product = multiply(head1->next, head2->next);
+    if (product == NULL) {
+        printf("Error creating product polynomial.\n");
+        freePolynomial(head1);
+        freePolynomial(head2);
+        freePolynomial(sum);
+        return 1;
+    }
 
-	return 0;
+    printf("Product polynomial:\n");
+    print(product);
 
+    freePolynomial(head1);
+    freePolynomial(head2);
+    freePolynomial(sum);
+    freePolynomial(product);
+
+    return 0;
 }
 
 Position createElement() {
-	Position newElement = (Position)malloc(sizeof(Polynom));
-
-	if (newElement == NULL) {
-		printf("Allocation failed. Exiting ...");
-		return -1;
-	}
-
-	return newElement;
+    Position p = (Position)malloc(sizeof(Polynom));
+    if (p == NULL)
+        return NULL;
+    p->next = NULL;
+    return p;
 }
 
 int readFromFile(Position head, char* filename) {
-	FILE* fp = NULL;
+    FILE* fp = fopen(filename, "r");
+    if (fp == NULL)
+        return 1;
 
-	fp = fopen(filename, "r");
-	if (fp == NULL) {
-		printf("File not open.\n");
-		return -1;
-	}
+    int val, exp;
+    Position current = head;
 
-	int val, exp;
-	Position current = head;
+    while (fscanf(fp, " %d %d", &val, &exp) == 2) {
+        Position newPoly = createElement();
+        if (newPoly == NULL) {
+            fclose(fp);
+            return 1;
+        }
 
-	while (!feof(fp)) {
-		Position newPolynomial = createElement();
-		fscanf(fp, " %d %d", &val, &exp);
+        newPoly->value = val;
+        newPoly->exp = exp;
+        newPoly->next = NULL;
 
-		newPolynomial->value = val;
-		newPolynomial->exp = exp;
-		newPolynomial->next = NULL;
+        while (current->next != NULL && current->next->exp > exp)
+            current = current->next;
 
-		while (current->next != NULL && exp < current->next->exp) {
-			current = current->next;
-		}
-		if (current->next != NULL && current->next->exp == exp) {
-			current->next->value += val;
-			free(newPolynomial);
-		}
-		else {
-			newPolynomial->next = current->next;
-			current->next = newPolynomial;
-		}
-		current = head;
-	}
-	fclose(fp);
-	return 0;
+        if (current->next != NULL && current->next->exp == exp) {
+            current->next->value += val;
+            free(newPoly);
+        }
+        else {
+            newPoly->next = current->next;
+            current->next = newPoly;
+        }
+        current = head;
+    }
+
+    fclose(fp);
+    return 0;
 }
 
-Position add(Position head1, Position head2) {
-	Position result = createElement();
+Position add(Position p1, Position p2) {
+    Position head = createElement();
+    if (head == NULL)
+        return NULL;
 
-	result->next = NULL;
-	Position temp = result;
+    Position tail = head;
 
-	while (head1 != NULL && head2 != NULL) {
-		Position new = createElement();
-		
-		if (head1->exp == head2->exp) {
-			new->value = head1->value + head2->value;
-			new->exp = head1->exp;
-			head1 = head1->next;
-			head2 = head2->next;
-		}
-		else if (head1->exp > head2->exp) {
-			new->value = head1->value;
-			new->exp = head1->exp;
-			head1 = head1->next;
-		}
-		else {
-			new->value = head2->value;
-			new->exp = head2->exp;
-			head2 = head2->next;
-		}
-		new->next = NULL;
-		temp->next = new;
-		temp = temp->next;
-	}
+    while (p1 && p2) {
+        Position newNode = createElement();
+        if (!newNode) {
+            freePolynomial(head);
+            return NULL;
+        }
 
-	Position remaining;
+        if (p1->exp == p2->exp) {
+            newNode->value = p1->value + p2->value;
+            newNode->exp = p1->exp;
+            p1 = p1->next;
+            p2 = p2->next;
+        }
+        else if (p1->exp > p2->exp) {
+            newNode->value = p1->value;
+            newNode->exp = p1->exp;
+            p1 = p1->next;
+        }
+        else {
+            newNode->value = p2->value;
+            newNode->exp = p2->exp;
+            p2 = p2->next;
+        }
 
-	if (head1 != NULL) {
-		remaining = head1;
-	}
-	else {
-		remaining = head2;
-	}
+        newNode->next = NULL;
+        tail->next = newNode;
+        tail = newNode;
+    }
 
-	while (remaining != NULL) {
-		Position new = createElement();
+    Position rest = (p1 != NULL) ? p1 : p2;
 
-		new->value = remaining->value;
-		new->exp = remaining->exp;
-		new->next = NULL;
-		temp->next = new;
-		temp = temp->next;
-		remaining = remaining->next;
-	}
+    while (rest) {
+        Position newNode = createElement();
+        if (!newNode) {
+            freePolynomial(head);
+            return NULL;
+        }
+        newNode->value = rest->value;
+        newNode->exp = rest->exp;
+        newNode->next = NULL;
+        tail->next = newNode;
+        tail = newNode;
+        rest = rest->next;
+    }
 
-	return result->next;
+    Position result = head->next;
+    free(head);
+    return result;
 }
 
-Position multiply(Position head1, Position head2) {
-	Position resultHead = createElement();
-	Position current1 = head1;
-	Position current2 = NULL;
+Position multiply(Position p1, Position p2) {
+    Position head = createElement();
+    if (!head)
+        return NULL;
 
-	resultHead->next = NULL;
+    while (p1) {
+        Position temp = p2;
 
-	while (current1 != NULL) {
+        while (temp) {
+            int val = p1->value * temp->value;
+            int exp = p1->exp + temp->exp;
 
-		current2 = head2;
+            Position prev = head;
+            Position curr = head->next;
 
-		while (current2 != NULL) {
+            while (curr && curr->exp > exp) {
+                prev = curr;
+                curr = curr->next;
+            }
 
-			int value = current1->value * current2->value;
-			int exponent = current1->exp + current2->exp;
+            if (curr && curr->exp == exp) {
+                curr->value += val;
+            }
+            else {
+                Position newNode = createElement();
+                if (!newNode) {
+                    freePolynomial(head);
+                    return NULL;
+                }
+                newNode->value = val;
+                newNode->exp = exp;
+                newNode->next = curr;
+                prev->next = newNode;
+            }
 
-			Position prev = resultHead;
-			Position curr = resultHead->next;
+            temp = temp->next;
+        }
+        p1 = p1->next;
+    }
 
-			while (curr != NULL && curr->exp > exponent) {
-				prev = curr;
-				curr = curr->next;
-			}
-
-			if (curr != NULL && curr->exp == exponent) {
-				curr->value += value;
-			}
-			else {
-				Position newNode = createElement();
-				newNode->value = value;
-				newNode->exp = exponent;
-				newNode->next = curr;
-				prev->next = newNode;
-			}
-
-			current2 = current2->next;
-		}
-
-		current1 = current1->next;
-	}
-
-	return resultHead->next;
+    Position result = head->next;
+    free(head);
+    return result;
 }
-
-
 
 int print(Position head) {
-	while (head != NULL) {
-		printf(" %d*x^%d", head->value, head->exp);
-		if (head->next != NULL) {
-			printf(" +");
-		}
-		head = head->next;
-	}
-	printf("\n");
-	return 0;
+    if (!head) {
+        printf("Empty polynomial.\n");
+        return 1;
+    }
+
+    while (head) {
+        printf(" %d*x^%d", head->value, head->exp);
+        if (head->next)
+            printf(" +");
+        head = head->next;
+    }
+    printf("\n");
+    return 0;
 }
 
 void freePolynomial(Position head) {
-	Position temp;
-
-	while (head != NULL) {
-		temp = head;
-		head = head->next;
-		free(temp);
-	}
+    Position tmp;
+    while (head) {
+        tmp = head;
+        head = head->next;
+        free(tmp);
+    }
 }
-
-
